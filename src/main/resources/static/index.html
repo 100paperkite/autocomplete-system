@@ -7,14 +7,27 @@
 </head>
 <body class="flex h-screen">
     <div class="w-96 mx-auto my-40">
-        <input class="input input-bordered w-full"
-               oninput="getKeywords(this.value)"
+        <input id="search-bar" class="input input-bordered w-full"
+               oninput="autoComplete(this.value)"
+               onkeydown="onKeyDown(event)"
                placeholder="Search..."
                type="text" />
         <div id="dropdown"></div>
     </div>
 
     <script>
+
+        const $ = (key) => document.querySelector(key);
+
+        const request = async (url) => {
+            return fetch(url, { headers: {"Content-Type": "application/json"}})
+                .then((response) => response.json())
+                .then((data) => data)
+                .catch((error) => {
+                    console.log("Error", error);
+                });
+        }
+
         class DropDown {
             constructor($element) {
                 this.$element = $element;
@@ -25,7 +38,16 @@
                 this.items = items;
             }
 
+            clear() {
+                this.items = [];
+                this.render();
+            }
+
             template() {
+                if (this.items.length == 0){
+                    return "";
+                }
+
                 return `<ul class="p-4 gap-y-2 menu shadow rounded-b-lg drop-shadow-lg">
                     ${this.items.map(item => `<li>${item}</li>`).join('')}
                     </ul>`;
@@ -36,22 +58,27 @@
             }
         }
 
-        const dropdown = new DropDown(document.querySelector("#dropdown"));
+        const dropdown = new DropDown($("#dropdown"));
         
-        const getKeywords = async (prefix) => {
-            const keywords = 
-                    await fetch(`http://localhost:8080/complete/search?q=${prefix}`,
-                        { headers: {"Content-Type": "application/json"}})
-                    .then((response) => response.json())
-                    .then((data) => data)
-                    .catch((error) => {
-                        console.log("Error", error);
-                    });
-                
+        const autoComplete = async (prefix) => {
+            const keywords = await request(`http://localhost:8080/complete/search?q=${prefix}`);
+
             if (keywords){
                 dropdown.setItems(keywords);
                 dropdown.render();
             }
+        }
+
+        const onKeyDown = event => {
+             if (event.key === "Enter") {
+                const $searchBar = $("#search-bar");
+                search($searchBar.value);
+             }
+        }
+
+        const search = async (keyword) => {
+            const result = await request(`http://localhost:8080/search?q=${keyword}`);
+            dropdown.clear();
         }
             
     </script>
